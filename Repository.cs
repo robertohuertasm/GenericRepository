@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Data.Entity;
 using System.Data.Entity.Core.Objects;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace WhereWasMySax.Models
+namespace GenericRepository
 {
     public class Repository<T, TId, TC> :  
         IDisposable, 
@@ -15,9 +15,15 @@ namespace WhereWasMySax.Models
         
     {
 
-        #region [private]
+    	#region [properties]
 
-        private readonly ObjectContext _objectContext;
+        private ObjectContext ObjectContext
+        {
+            get
+            {
+                return ((IObjectContextAdapter)Extra).ObjectContext;
+            }
+        }
 
         #endregion
 
@@ -26,7 +32,6 @@ namespace WhereWasMySax.Models
         public Repository()
         {
             Extra = new TC();
-            _objectContext = ((IObjectContextAdapter) Extra).ObjectContext;
         }
 
         #endregion
@@ -89,7 +94,7 @@ namespace WhereWasMySax.Models
 
         public void DetectChanges()
         {
-            _objectContext.DetectChanges();
+            ObjectContext.DetectChanges();
         }
 
         public void Save()
@@ -98,6 +103,7 @@ namespace WhereWasMySax.Models
         }
 
         #endregion
+
 
         #region [private]
 
@@ -114,7 +120,8 @@ namespace WhereWasMySax.Models
         }
 
         #endregion
-        
+
+
         #region [Dispose]
 
         private bool _disposed;
@@ -137,7 +144,7 @@ namespace WhereWasMySax.Models
             GC.SuppressFinalize(this);
         }
 
-        #endregion
+        #endregion 
 
     }
 }
