@@ -8,14 +8,14 @@ using System.Linq.Expressions;
 namespace GenericRepository
 {
     public class Repository<T, TId, TC> :  
-        IDisposable, 
         IRepository<T,TId, TC> 
         where T: BaseModel<TId>
         where TC : DbContext, new() 
+        where TId : IComparable
         
     {
 
-    	#region [properties]
+        #region [properties]
 
         private ObjectContext ObjectContext
         {
@@ -58,14 +58,16 @@ namespace GenericRepository
         public T Get(TId id)
         {
             var all = Get();
-            var result = all.FirstOrDefault(x => x.Id.Equals(id));
+            var filtered = Filter(all, x => x.Id, id);
+            var result = filtered.FirstOrDefault();
             return result;
         }
 
         public T Get(TId id, params Expression<Func<T, object>>[] includePropertiesExpressions)
         {
             var all = Get(includePropertiesExpressions);
-            var result = all.FirstOrDefault(x => x.Id.Equals(id));
+            var filtered = Filter(all, x => x.Id, id);
+            var result = filtered.FirstOrDefault();
             return result;
         }
 
@@ -77,7 +79,11 @@ namespace GenericRepository
         public IQueryable<T> Get(params Expression<Func<T, object>>[] includePropertiesExpressions)
         {
             var all = Get();
-            return includePropertiesExpressions.Aggregate(all, (current, expression) => current.Include(expression));
+            foreach (var expression in includePropertiesExpressions)
+            {
+                all = all.Include(expression);
+            }
+            return all;
         }
 
         public IQueryable<T> Find(Expression<Func<T, bool>> predicate)
@@ -119,8 +125,27 @@ namespace GenericRepository
             return dbEntityEntry;
         }
 
-        #endregion
+        private IQueryable<T> Filter<TProperty>(IQueryable<T> dbSet,
+            Expression<Func<T, TProperty>> property, TProperty value)
+            where TProperty : IComparable
+        {
 
+            var memberExpression = property.Body as MemberExpression;
+            if (memberExpression == null || !(memberExpression.Member is PropertyInfo))
+            {
+
+                throw new ArgumentException("Property expected", "property");
+            }
+
+            var left = property.Body;
+            Expression right = Expression.Constant(value, typeof(TProperty));
+            Expression searchExpression = Expression.Equal(left, right);
+            var lambda = Expression.Lambda<Func<T, bool>>(searchExpression, new[] { property.Parameters.Single() });
+
+            return dbSet.Where(lambda);
+        }
+
+        #endregion
 
         #region [Dispose]
 
@@ -144,7 +169,7 @@ namespace GenericRepository
             GC.SuppressFinalize(this);
         }
 
-        #endregion 
+        #endregion
 
     }
 }
