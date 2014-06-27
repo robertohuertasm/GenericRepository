@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace GenericRepository
 {
-    public interface IRepository<T, in TId, TExtra>
+    public interface IRepository<T, in TId, TExtra> : IDisposable
         where T : BaseModel<TId> 
     {
         TExtra Extra { get;  set; }
