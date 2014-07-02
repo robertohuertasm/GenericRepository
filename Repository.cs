@@ -7,10 +7,9 @@ using System.Linq.Expressions;
 
 namespace GenericRepository
 {
-    public class Repository<T, TId, TC> :  
+    public class Repository<T, TId> :  
         IRepository<T,TId, TC> 
         where T: BaseModel<TId>
-        where TC : DbContext, new() 
         where TId : IComparable
         
     {
@@ -21,7 +20,7 @@ namespace GenericRepository
         {
             get
             {
-                return ((IObjectContextAdapter)Extra).ObjectContext;
+                return ((IObjectContextAdapter)Context).ObjectContext;
             }
         }
 
@@ -31,14 +30,14 @@ namespace GenericRepository
 
         public Repository()
         {
-            Extra = new TC();
+            Context = new DbContext(); //your EF context here
         }
 
         #endregion
 
         #region [interface]
 
-        public TC Extra { get; set; } 
+        protected DbContext Context { get; set; } 
 
         public void Create(T item)
         {
@@ -73,7 +72,7 @@ namespace GenericRepository
 
         public IQueryable<T> Get()
         {
-            return Extra.Set<T>();
+            return Context.Set<T>();
         }
 
         public IQueryable<T> Get(params Expression<Func<T, object>>[] includePropertiesExpressions)
@@ -95,7 +94,7 @@ namespace GenericRepository
 
         public void AddGraph(T item)
         {
-            Extra.Set<T>().Add(item);
+            Context.Set<T>().Add(item);
         }
 
         public void DetectChanges()
@@ -105,7 +104,7 @@ namespace GenericRepository
 
         public void Save()
         {
-            Extra.SaveChanges();
+            Context.SaveChanges();
         }
 
         #endregion
@@ -115,11 +114,11 @@ namespace GenericRepository
 
         private DbEntityEntry GetDbEntityEntry(T entity)
         {
-            DbEntityEntry dbEntityEntry = Extra.Entry(entity);
+            DbEntityEntry dbEntityEntry = Context.Entry(entity);
             if (dbEntityEntry.State == EntityState.Detached)
             {
 
-                Extra.Set<T>().Attach(entity);
+                Context.Set<T>().Attach(entity);
             }
 
             return dbEntityEntry;
@@ -157,7 +156,7 @@ namespace GenericRepository
             {
                 if (disposing)
                 {
-                    Extra.Dispose();
+                    Context.Dispose();
                 }
             }
             _disposed = true;
